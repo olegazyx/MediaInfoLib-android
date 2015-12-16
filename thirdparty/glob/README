@@ -1,0 +1,4 @@
+Download them.
+
+$ wget http://www.gaborcselle.com/open_source/android/ndk/glob/glob.c
+$ wget http://www.gaborcselle.com/open_source/android/ndk/glob/glob.h

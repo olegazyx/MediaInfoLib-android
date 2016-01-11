@@ -46,8 +46,6 @@ typedef struct {
 #define LOG(...)  ((void)0)
 #define LOGW(...)  __android_log_print(ANDROID_LOG_WARN, "android-extra", __VA_ARGS__)
 
-
-
 /**
  * Convert multibyte character to wide character.
  * The C multibyte character string @p mbstr is interpreted character by character
@@ -84,7 +82,7 @@ size_t mbstowcs(wchar_t* wcstr, const char* mbstr, size_t max)
         int count = 0;
 
         while (*p) {
-            
+
             res = utf8_mbtowc(conv, &wc, (const unsigned char*) p, mbend - p);
             //LOGW("utf8_mbtowc(conv, &wc, '%s', %d) return %d", p, mbend - p, res);
             //res = cp949_mbtowc(conv, &wc, (const unsigned char*) p, mbend - p);
@@ -168,7 +166,7 @@ size_t wcstombs(char* mbstr, const wchar_t* wcstr, size_t max)
         int count = 0;
 
         while (*pwc) {
-            
+
             res = utf8_wctomb(conv, cbuf, *pwc, MB_MAX_LEN);
             //res = cp949_wctomb(conv, cbuf, *pwc, MB_MAX_LEN);
 

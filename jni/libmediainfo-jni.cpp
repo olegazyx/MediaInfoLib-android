@@ -1,7 +1,10 @@
 #include <assert.h>
 #include <jni.h>
 
-// if need to debug messages, comment out below undef lines.
+#include <stdlib.h>
+#include <wchar.h>
+
+// if need to debug messages, comment out below undef lines. Or use NDK_DEBUG=1
 //#define _DEBUG
 //#define DEBUG
 #undef _DEBUG
@@ -80,23 +83,23 @@ _PrintableChars(const Char* chars, char* buf, size_t buflen)
 static inline const char*
 PrintableChars(const Char* chars)
 {
-#if defined(_DEBUG) || defined(DEBUG)
+//#if defined(_DEBUG) || defined(DEBUG)
     static char buf[128];
     return _PrintableChars(chars, &buf[0], sizeof(buf)/sizeof(char));
-#else
-    return "";
-#endif
+//#else
+//    return "";
+//#endif
 }
 
 static inline const char*
 PrintableChars2(const Char* chars)
 {
-#if defined(_DEBUG) || defined(DEBUG)
+//#if defined(_DEBUG) || defined(DEBUG)
     static char buf[128];
     return _PrintableChars(chars, &buf[0], sizeof(buf)/sizeof(char));
-#else
-    return "";
-#endif
+//#else
+//    return "";
+//#endif
 }
 #endif
 
@@ -215,7 +218,8 @@ CastInfoKind(jint infoKind)
 static inline jstring
 NewJString(JNIEnv *pEnv, String str)
 {
-    //size_t len = str.max_size(); //5242880; //str.max_size(); //str.size();
+    // 1.
+    /*//size_t len = str.max_size(); //5242880; //str.max_size(); //str.size();
     //int chcount = 1048576; //1048576; //str.length();
 
     char* cstr = new char[1048576];
@@ -225,29 +229,78 @@ NewJString(JNIEnv *pEnv, String str)
 
     pEnv->ReleaseStringChars(jstr, jchars);
 
+    return jstr;*/
+
+
+    // 2.
+    /*char* cstr = new char[str.size() + 1];
+    int i = 0;
+    while(str.c_str()[i] != '\0')
+    {
+        cstr[i] = (char)str.c_str()[i];
+        ++i;
+    }
+    jstring jstr = pEnv->NewStringUTF(cstr);
+    return jstr;*/
+
+
+    // 3.
+    jstring result = NULL;
+    size_t len = wcslen(str.c_str()) * 4 + 1;
+    size_t sz = wcstombs(0, str.c_str(), len);
+
+    char* ch = new char[sz + 1];
+
+    wcstombs(ch, str.c_str(), len);
+
+    ch[sz] = '\0';
+    result = pEnv->NewStringUTF(ch);
+    delete[] ch;
+
     #if defined(_DEBUG) || defined(DEBUG)
-        const char *nativeString = (pEnv)->GetStringUTFChars(jstr, NULL);
+        const char *nativeString = (pEnv)->GetStringUTFChars(result, NULL);
         LOG("NewJString(JNIEnv *pEnv, String str) -> jstring = \n'%s'\n", nativeString);
-        pEnv->ReleaseStringUTFChars(jstr, nativeString);
+        //pEnv->ReleaseStringUTFChars(jstr, nativeString);
     #endif
 
-    return jstr;
+    return result;
 }
 
 static inline String
 NewString(JNIEnv *pEnv, jstring str)
 {
-    const char *CStr = pEnv->GetStringUTFChars(str, NULL);
+    // 1.
+    /*const char *CStr = pEnv->GetStringUTFChars(str, NULL);
     if (NULL == CStr)
         return NULL;
 
     jsize len = pEnv->GetStringUTFLength(str);
-    wchar_t* wcstr = new wchar_t[1048576];
+    wchar_t *wcstr = new wchar_t[1048576];
     mbstowcs(wcstr, CStr, len);
 
     pEnv->ReleaseStringUTFChars(str, CStr);
 
-    return wcstr;
+    LOG("NewString('%s') returns '%s'.\n", CStr, PrintableChars(wcstr));
+
+    return wcstr;*/
+
+
+    // 2.
+    std::wstring value;
+
+    const jchar *raw = pEnv->GetStringChars(str, 0);
+    jsize len = pEnv->GetStringLength(str);
+
+    value.assign(raw, raw + len);
+
+    pEnv->ReleaseStringChars(str, raw);
+
+    #if defined(_DEBUG) || defined(DEBUG)
+        const char *CStrParam = pEnv->GetStringUTFChars(str, NULL);
+        LOG("NewString('%s') returns '%s'.\n", CStrParam, PrintableChars(value.c_str()));
+    #endif
+
+    return value;
 }
 
 
@@ -387,8 +440,7 @@ MediaInfo_getMediaInfo(JNIEnv* pEnv, jobject self, jstring filename)
     //strInfo += __T("\r\n\r\nClose\r\n");
     MI.Close();
 
-    LOG("MediaInfo_getMediaInfo('%s', ..) returns '%s'.\n",
-        PrintableChars(strInfo.c_str()), PrintableChars2(strInfo.c_str()));
+    LOG("MediaInfo_getMediaInfo() returns '%s'\n", PrintableChars(strInfo.c_str()));
 
     return NewJString(pEnv, strInfo);
 }

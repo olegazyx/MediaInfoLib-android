@@ -32,25 +32,14 @@ USER_CFLAGS        += -DMEDIAINFO_LIBMMS_NO
 # In ZenLib, refer to int128s and int128u implelment
 USER_CFLAGS        += -D__NO_LONG_DOUBLE_MATH
 
-ifneq ($(NDK_DEBUG), 0)
-USER_CFLAGS        += -DDEBUG -D_DEBUG
-USER_CFLAGS        += -DMEDIAINFO_TRACE_YES    # default: NO
+# Comment out for debug msg from library
+#USER_CFLAGS        += -DDEBUG -D_DEBUG
+#USER_CFLAGS        += -DMEDIAINFO_TRACE_YES    # default: NO
 ## flags bellow make file in /tmp, to change place edit MediaInfo_Internal.cpp, line 67
 #USER_CFLAGS        += -DMEDIAINFO_DEBUG_OUTPUT
 #USER_CFLAGS        += -DMEDIAINFO_DEBUG_CONFIG
 #USER_CFLAGS        += -DMEDIAINFO_DEBUG_WARNING_GET
 #USER_CFLAGS        += -DMEDIAINFO_DEBUG_BUFFER
-## Comment out line 8 & 9 in /mediainfo/jni/libmediainfo-jni.cpp
-else
-USER_CFLAGS        += -DMEDIAINFO_TRACE_NO
-USER_CFLAGS        += -DMEDIAINFO_EVENTS_NO
-USER_CFLAGS        += -DMEDIAINFO_DEMUX_NO
-USER_CFLAGS        += -DMEDIAINFO_DVDIF_ANALYZE_NO
-USER_CFLAGS        += -DMEDIAINFO_MPEGTS_DUPLICATE_NO
-USER_CFLAGS        += -DMEDIAINFO_SEEK_NO
-USER_CFLAGS        += -DMEDIAINFO_NEXTPACKET_NO
-USER_CFLAGS        += -DMEDIAINFO_IBI_NO
-endif
 
 #
 # libmediainfo library configurations

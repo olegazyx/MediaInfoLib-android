@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include <wchar.h>
 
-// if need to debug messages, comment out below undef lines. Or use NDK_DEBUG=1
+// if need to debug messages, comment out below undef lines. Or use comment out lines in Android.mk
 //#define _DEBUG
 //#define DEBUG
-#undef _DEBUG
-#undef DEBUG
+//#undef _DEBUG
+//#undef DEBUG
 
 #if defined(WIN32) && defined(_DEBUG)
 #   include <vld.h>

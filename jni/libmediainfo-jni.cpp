@@ -442,8 +442,9 @@ MediaInfo_getMediaInfo(JNIEnv* pEnv, jobject self, jstring filename)
     if (F == 0)
         return NewJString(pEnv, __T("Error opening file..."));
 
+    size_t buffsize = 1024 * 1024; //7 * 188;
     //From: preparing a memory buffer for reading
-    unsigned char* From_Buffer = new unsigned char[7 * 188]; //Note: you can do your own buffer
+    unsigned char* From_Buffer = new unsigned char[buffsize]; //Note: you can do your own buffer
     size_t From_Buffer_Size; //The size of the read file buffer
 
     //From: retrieving file size
@@ -459,7 +460,7 @@ MediaInfo_getMediaInfo(JNIEnv* pEnv, jobject self, jstring filename)
 
     do {
         //Reading data somewhere, do what you want for this.
-        From_Buffer_Size = fread(From_Buffer, 1, 7 * 188, F);
+        From_Buffer_Size = fread(From_Buffer, 1, buffsize, F);
         //Sending the buffer to MediaInfo
         size_t Status = MI.Open_Buffer_Continue(From_Buffer, From_Buffer_Size);
 

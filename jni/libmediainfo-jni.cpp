@@ -317,17 +317,64 @@ MediaInfo_getById(JNIEnv* pEnv, jobject self, jstring filename, jint streamKind,
 {
     FuncCallLog funclog(FUNC);
 
-    MediaInfo MI;
-
+    const char * cfilename = (pEnv)->GetStringUTFChars(filename, NULL);
     String strInfo;
 
-    String cfilename = NewString(pEnv, filename);
+    //From: preparing an example file for reading
+    FILE* F = fopen(cfilename, "rb"); //You can use something else than a file
+    if (F == 0)
+        return NewJString(pEnv, __T("Error opening file..."));
 
-    MI.Open(cfilename);
+    size_t buffsize = 1024 * 1024; //7 * 188;
+    //From: preparing a memory buffer for reading
+    unsigned char* From_Buffer = new unsigned char[buffsize]; //Note: you can do your own buffer
+    size_t From_Buffer_Size; //The size of the read file buffer
+
+    //From: retrieving file size
+    fseek(F, 0, SEEK_END);
+    long F_Size = ftell(F);
+    fseek(F, 0, SEEK_SET);
+
+    //Initializing MediaInfo
+    MediaInfo MI;
+    //Preparing to fill MediaInfo with a buffer
+    MI.Open_Buffer_Init(F_Size, 0);
+    //The parsing loop
+
+    do {
+        //Reading data somewhere, do what you want for this.
+        From_Buffer_Size = fread(From_Buffer, 1, buffsize, F);
+        //Sending the buffer to MediaInfo
+        size_t Status = MI.Open_Buffer_Continue(From_Buffer, From_Buffer_Size);
+
+        if (Status & 0x08) //Bit3=Finished
+            break;
+
+        //Testing if there is a MediaInfo request to go elsewhere
+        if (MI.Open_Buffer_Continue_GoTo_Get() != (MediaInfo_int64u) -1) {
+            fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
+            MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+        }
+    } while (From_Buffer_Size > 0);
+
+    //Finalizing
+    MI.Open_Buffer_Finalize(); //This is the end of the stream, MediaInfo must finnish some work
 
     strInfo = MI.Get(CastStreamKind(streamKind), streamNum, parameter);
 
-    MI.Close();
+    fclose(F);
+
+    //MediaInfo MI;
+
+    //String strInfo;
+
+    //String cfilename = NewString(pEnv, filename);
+
+    //MI.Open(cfilename);
+
+    //strInfo = MI.Get(CastStreamKind(streamKind), streamNum, parameter);
+
+    //MI.Close();
 
     LOG("MediaInfo->Get(%d,%d,%d) returns '%s'\n",
         CastStreamKind(streamKind), streamNum, parameter, PrintableChars(strInfo.c_str()));
@@ -340,18 +387,66 @@ MediaInfo_getByName(JNIEnv* pEnv, jobject self, jstring filename, jint streamKin
 {
     FuncCallLog funclog(FUNC);
 
-    MediaInfo MI;
-
+    const char * cfilename = (pEnv)->GetStringUTFChars(filename, NULL);
     String strInfo;
 
+    //From: preparing an example file for reading
+    FILE* F = fopen(cfilename, "rb"); //You can use something else than a file
+    if (F == 0)
+        return NewJString(pEnv, __T("Error opening file..."));
+
+    size_t buffsize = 1024 * 1024; //7 * 188;
+    //From: preparing a memory buffer for reading
+    unsigned char* From_Buffer = new unsigned char[buffsize]; //Note: you can do your own buffer
+    size_t From_Buffer_Size; //The size of the read file buffer
+
+    //From: retrieving file size
+    fseek(F, 0, SEEK_END);
+    long F_Size = ftell(F);
+    fseek(F, 0, SEEK_SET);
+
+    //Initializing MediaInfo
+    MediaInfo MI;
+    //Preparing to fill MediaInfo with a buffer
+    MI.Open_Buffer_Init(F_Size, 0);
+    //The parsing loop
+
+    do {
+        //Reading data somewhere, do what you want for this.
+        From_Buffer_Size = fread(From_Buffer, 1, buffsize, F);
+        //Sending the buffer to MediaInfo
+        size_t Status = MI.Open_Buffer_Continue(From_Buffer, From_Buffer_Size);
+
+        if (Status & 0x08) //Bit3=Finished
+            break;
+
+        //Testing if there is a MediaInfo request to go elsewhere
+        if (MI.Open_Buffer_Continue_GoTo_Get() != (MediaInfo_int64u) -1) {
+            fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
+            MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+        }
+    } while (From_Buffer_Size > 0);
+
+    //Finalizing
+    MI.Open_Buffer_Finalize(); //This is the end of the stream, MediaInfo must finnish some work
+
     String cstr = NewString(pEnv, parameter);
-    String cfilename = NewString(pEnv, filename);
-
-    MI.Open(cfilename);
-
     strInfo = MI.Get(CastStreamKind(streamKind), streamNum, cstr);
 
-    MI.Close();
+    fclose(F);
+
+    //MediaInfo MI;
+
+    //String strInfo;
+
+    //String cstr = NewString(pEnv, parameter);
+    //String cfilename = NewString(pEnv, filename);
+
+    //MI.Open(cfilename);
+
+    //strInfo = MI.Get(CastStreamKind(streamKind), streamNum, cstr);
+
+    //MI.Close();
 
     LOG("MediaInfo->Get(%d,%d,'%s') returns '%s'%d\n",
         CastStreamKind(streamKind), streamNum, PrintableChars(cstr.c_str()), PrintableChars2(strInfo.c_str()), strInfo.length());
@@ -364,17 +459,64 @@ MediaInfo_getByIdDetail(JNIEnv* pEnv, jobject self, jstring filename, jint strea
 {
     FuncCallLog funclog(FUNC);
 
-    MediaInfo MI;
-
+    const char * cfilename = (pEnv)->GetStringUTFChars(filename, NULL);
     String strInfo;
 
-    String cfilename = NewString(pEnv, filename);
+    //From: preparing an example file for reading
+    FILE* F = fopen(cfilename, "rb"); //You can use something else than a file
+    if (F == 0)
+        return NewJString(pEnv, __T("Error opening file..."));
 
-    MI.Open(cfilename);
+    size_t buffsize = 1024 * 1024; //7 * 188;
+    //From: preparing a memory buffer for reading
+    unsigned char* From_Buffer = new unsigned char[buffsize]; //Note: you can do your own buffer
+    size_t From_Buffer_Size; //The size of the read file buffer
 
-    strInfo = MI.Get(CastStreamKind(streamKind), streamNum, parameter,
-                                     CastInfoKind(kindOfInfo));
-    MI.Close();
+    //From: retrieving file size
+    fseek(F, 0, SEEK_END);
+    long F_Size = ftell(F);
+    fseek(F, 0, SEEK_SET);
+
+    //Initializing MediaInfo
+    MediaInfo MI;
+    //Preparing to fill MediaInfo with a buffer
+    MI.Open_Buffer_Init(F_Size, 0);
+    //The parsing loop
+
+    do {
+        //Reading data somewhere, do what you want for this.
+        From_Buffer_Size = fread(From_Buffer, 1, buffsize, F);
+        //Sending the buffer to MediaInfo
+        size_t Status = MI.Open_Buffer_Continue(From_Buffer, From_Buffer_Size);
+
+        if (Status & 0x08) //Bit3=Finished
+            break;
+
+        //Testing if there is a MediaInfo request to go elsewhere
+        if (MI.Open_Buffer_Continue_GoTo_Get() != (MediaInfo_int64u) -1) {
+            fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
+            MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+        }
+    } while (From_Buffer_Size > 0);
+
+    //Finalizing
+    MI.Open_Buffer_Finalize(); //This is the end of the stream, MediaInfo must finnish some work
+
+    strInfo = strInfo = MI.Get(CastStreamKind(streamKind), streamNum, parameter, CastInfoKind(kindOfInfo));
+
+    fclose(F);
+
+    //MediaInfo MI;
+
+    //String strInfo;
+
+    //String cfilename = NewString(pEnv, filename);
+
+    //MI.Open(cfilename);
+
+    //strInfo = MI.Get(CastStreamKind(streamKind), streamNum, parameter,
+    //                                 CastInfoKind(kindOfInfo));
+    //MI.Close();
 
     LOG("MediaInfo->Get(%d,%d,%d,%d) returns '%s'\n",
         CastStreamKind(streamKind), streamNum, parameter, kindOfInfo, PrintableChars(strInfo.c_str()));
@@ -387,20 +529,68 @@ MediaInfo_getByNameDetail(JNIEnv* pEnv, jobject self, jstring filename, jint str
 {
     FuncCallLog funclog(FUNC);
 
-    MediaInfo MI;
-
+    const char * cfilename = (pEnv)->GetStringUTFChars(filename, NULL);
     String strInfo;
 
+    //From: preparing an example file for reading
+    FILE* F = fopen(cfilename, "rb"); //You can use something else than a file
+    if (F == 0)
+        return NewJString(pEnv, __T("Error opening file..."));
+
+    size_t buffsize = 1024 * 1024; //7 * 188;
+    //From: preparing a memory buffer for reading
+    unsigned char* From_Buffer = new unsigned char[buffsize]; //Note: you can do your own buffer
+    size_t From_Buffer_Size; //The size of the read file buffer
+
+    //From: retrieving file size
+    fseek(F, 0, SEEK_END);
+    long F_Size = ftell(F);
+    fseek(F, 0, SEEK_SET);
+
+    //Initializing MediaInfo
+    MediaInfo MI;
+    //Preparing to fill MediaInfo with a buffer
+    MI.Open_Buffer_Init(F_Size, 0);
+    //The parsing loop
+
+    do {
+        //Reading data somewhere, do what you want for this.
+        From_Buffer_Size = fread(From_Buffer, 1, buffsize, F);
+        //Sending the buffer to MediaInfo
+        size_t Status = MI.Open_Buffer_Continue(From_Buffer, From_Buffer_Size);
+
+        if (Status & 0x08) //Bit3=Finished
+            break;
+
+        //Testing if there is a MediaInfo request to go elsewhere
+        if (MI.Open_Buffer_Continue_GoTo_Get() != (MediaInfo_int64u) -1) {
+            fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
+            MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+        }
+    } while (From_Buffer_Size > 0);
+
+    //Finalizing
+    MI.Open_Buffer_Finalize(); //This is the end of the stream, MediaInfo must finnish some work
+
     String cstr = NewString(pEnv, parameter);
+    strInfo = strInfo = MI.Get(CastStreamKind(streamKind), streamNum, cstr, CastInfoKind(kindOfInfo), CastInfoKind(kindOfSearch));
 
-    String cfilename = NewString(pEnv, filename);
+    fclose(F);
 
-    MI.Open(cfilename);
+    //MediaInfo MI;
 
-    strInfo = MI.Get(CastStreamKind(streamKind), streamNum, cstr,
-                                     CastInfoKind(kindOfInfo), CastInfoKind(kindOfSearch));
+    //String strInfo;
 
-    MI.Close();
+    //String cstr = NewString(pEnv, parameter);
+
+    //String cfilename = NewString(pEnv, filename);
+
+    //MI.Open(cfilename);
+
+    //strInfo = MI.Get(CastStreamKind(streamKind), streamNum, cstr,
+    //                                 CastInfoKind(kindOfInfo), CastInfoKind(kindOfSearch));
+
+    //MI.Close();
 
     LOG("MediaInfo->Get(%d,%d,'%s',%d,%d) returns '%s'\n",
         CastStreamKind(streamKind), streamNum, PrintableChars(cstr.c_str()),
@@ -412,16 +602,62 @@ MediaInfo_getByNameDetail(JNIEnv* pEnv, jobject self, jstring filename, jint str
 JNIEXPORT jint JNICALL
 MediaInfo_countGet(JNIEnv* pEnv, jobject self, jstring filename, jint streamKind, jint streamNum)
 {
+    const char * cfilename = (pEnv)->GetStringUTFChars(filename, NULL);
+
+    //From: preparing an example file for reading
+    FILE* F = fopen(cfilename, "rb"); //You can use something else than a file
+    if (F == 0)
+        return -1;
+
+    size_t buffsize = 1024 * 1024; //7 * 188;
+    //From: preparing a memory buffer for reading
+    unsigned char* From_Buffer = new unsigned char[buffsize]; //Note: you can do your own buffer
+    size_t From_Buffer_Size; //The size of the read file buffer
+
+    //From: retrieving file size
+    fseek(F, 0, SEEK_END);
+    long F_Size = ftell(F);
+    fseek(F, 0, SEEK_SET);
+
+    //Initializing MediaInfo
     MediaInfo MI;
+    //Preparing to fill MediaInfo with a buffer
+    MI.Open_Buffer_Init(F_Size, 0);
+    //The parsing loop
 
-    int intInfo;
+    do {
+        //Reading data somewhere, do what you want for this.
+        From_Buffer_Size = fread(From_Buffer, 1, buffsize, F);
+        //Sending the buffer to MediaInfo
+        size_t Status = MI.Open_Buffer_Continue(From_Buffer, From_Buffer_Size);
 
-    String cfilename = NewString(pEnv, filename);
+        if (Status & 0x08) //Bit3=Finished
+            break;
 
-    MI.Open(cfilename);
+        //Testing if there is a MediaInfo request to go elsewhere
+        if (MI.Open_Buffer_Continue_GoTo_Get() != (MediaInfo_int64u) -1) {
+            fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
+            MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+        }
+    } while (From_Buffer_Size > 0);
 
-    intInfo = MI.Count_Get(CastStreamKind(streamKind), (size_t) streamNum);
-    MI.Close();
+    //Finalizing
+    MI.Open_Buffer_Finalize(); //This is the end of the stream, MediaInfo must finnish some work
+
+    int intInfo = MI.Count_Get(CastStreamKind(streamKind), (size_t) streamNum);;
+
+    fclose(F);
+
+    //MediaInfo MI;
+
+    //int intInfo;
+
+    //String cfilename = NewString(pEnv, filename);
+
+    //MI.Open(cfilename);
+
+    //intInfo = MI.Count_Get(CastStreamKind(streamKind), (size_t) streamNum);
+    //MI.Close();
 
     return intInfo;
 }

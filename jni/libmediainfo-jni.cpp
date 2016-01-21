@@ -481,28 +481,30 @@ MediaInfo_getMediaInfo(JNIEnv* pEnv, jobject self, jstring filename)
     strInfo += MI.Inform().c_str();
     //strInfo += __T("\r\n\r\nClose\r\n");
 
+    fclose(F);
+
     LOG("MediaInfo_getMediaInfo() returns '%s'\n", PrintableChars(strInfo.c_str()));
 
     return NewJString(pEnv, strInfo);
 
-    // this code don't work with files larger then 2GB (Use buffer code)
-    /*String cstr = NewString(pEnv, filename);
+    //// this code don't work with files larger then 2GB (Use buffer code)
+    //String cstr = NewString(pEnv, filename);
 
-    MediaInfo MI;
+    //MediaInfo MI;
 
-    String strInfo;
+    //String strInfo;
 
-    //strInfo += __T("\r\n\r\nOpen\r\n");
-    MI.Open(cstr);
-    //strInfo += __T("\r\n\r\nInform with Complete=false\r\n");
-    MI.Option(__T("Complete"));
-    strInfo = MI.Inform().c_str();
-    //strInfo += __T("\r\n\r\nClose\r\n");
-    MI.Close();
+    ////strInfo += __T("\r\n\r\nOpen\r\n");
+    //MI.Open(cstr);
+    ////strInfo += __T("\r\n\r\nInform with Complete=false\r\n");
+    //MI.Option(__T("Complete"));
+    //strInfo = MI.Inform().c_str();
+    ////strInfo += __T("\r\n\r\nClose\r\n");
+    //MI.Close();
 
-    LOG("MediaInfo_getMediaInfo() returns '%s'\n", PrintableChars(strInfo.c_str()));
+    //LOG("MediaInfo_getMediaInfo() returns '%s'\n", PrintableChars(strInfo.c_str()));
 
-    return NewJString(pEnv, strInfo);*/
+    //return NewJString(pEnv, strInfo);
 }
 
 JNIEXPORT jstring JNICALL

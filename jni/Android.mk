@@ -24,10 +24,14 @@ LIBMEDIAINFO_INC_DIR = $(MEDIAINFO_DIR)/MediaInfoLib/Source
 LIBMEDIAINFO_SRC_DIR = $(MEDIAINFO_DIR)/MediaInfoLib/Source/MediaInfo
 THIRDPARTY_DIR       = ../thirdparty
 
-#USER_CFLAGS        += -fshort-wchar
 USER_CFLAGS        += -DUNICODE
 USER_CFLAGS        += -DMEDIAINFO_LIBCURL_NO
 USER_CFLAGS        += -DMEDIAINFO_LIBMMS_NO
+
+USER_CFLAGS        += -D_LARGE_FILES
+USER_CFLAGS        += -D_FILE_OFFSET_BITS=64
+
+USER_CFLAGS        += -fPIC
 
 # In ZenLib, refer to int128s and int128u implelment
 USER_CFLAGS        += -D__NO_LONG_DOUBLE_MATH
@@ -308,16 +312,9 @@ LOCAL_C_INCLUDES        += $(LOCAL_PATH)/$(LIBMEDIAINFO_INC_DIR)/ThirdParty/sha2
 LOCAL_C_INCLUDES        += $(LOCAL_PATH)/$(LIBMEDIAINFO_INC_DIR)/ThirdParty/hmac-gladman
 LOCAL_C_INCLUDES        += $(LOCAL_PATH)/$(LIBZEN_INC_DIR)
 LOCAL_C_INCLUDES        += $(LOCAL_PATH)/$(LIBZEN_INC_DIR)/ZenLib
+
 LOCAL_CFLAGS            += -Wall $(USER_CFLAGS)
 LOCAL_LDLIBS            := -llog -lz -lm
 LOCAL_CXXFLAGS          += -DUNICODE
 
 include $(BUILD_SHARED_LIBRARY)
-
-#
-# include libc++_shared.so from ../lib/$(TARGET_ARCH_ABI)
-#
-#include $(CLEAR_VARS)
-#LOCAL_MODULE := libstlport_shared.so
-#LOCAL_SRC_FILES := ../lib/$(TARGET_ARCH_ABI)/libstlport_shared.so
-#include $(PREBUILT_SHARED_LIBRARY)

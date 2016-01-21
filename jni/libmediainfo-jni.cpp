@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <wchar.h>
 
+#include <stdio.h>
+#include <MediaInfo/MediaInfo_Events.h>
+
 // if need to debug messages, comment out below undef lines. Or use comment out lines in Android.mk
 //#define _DEBUG
 //#define DEBUG
@@ -426,7 +429,64 @@ MediaInfo_countGet(JNIEnv* pEnv, jobject self, jstring filename, jint streamKind
 JNIEXPORT jstring JNICALL
 MediaInfo_getMediaInfo(JNIEnv* pEnv, jobject self, jstring filename)
 {
-    String cstr = NewString(pEnv, filename);
+    const char * cfilename = (pEnv)->GetStringUTFChars(filename, NULL);
+    String strInfo;
+
+    strInfo =  __T("File\r\n");
+    strInfo += __T("Complete name                            : ");
+    strInfo += NewString(pEnv, filename);
+    strInfo += __T("\r\n\r\n");
+
+    //From: preparing an example file for reading
+    FILE* F = fopen(cfilename, "rb"); //You can use something else than a file
+    if (F == 0)
+        return NewJString(pEnv, __T("Error opening file..."));
+
+    //From: preparing a memory buffer for reading
+    unsigned char* From_Buffer = new unsigned char[7 * 188]; //Note: you can do your own buffer
+    size_t From_Buffer_Size; //The size of the read file buffer
+
+    //From: retrieving file size
+    fseek(F, 0, SEEK_END);
+    long F_Size = ftell(F);
+    fseek(F, 0, SEEK_SET);
+
+    //Initializing MediaInfo
+    MediaInfo MI;
+    //Preparing to fill MediaInfo with a buffer
+    MI.Open_Buffer_Init(F_Size, 0);
+    //The parsing loop
+
+    do {
+        //Reading data somewhere, do what you want for this.
+        From_Buffer_Size = fread(From_Buffer, 1, 7 * 188, F);
+        //Sending the buffer to MediaInfo
+        size_t Status = MI.Open_Buffer_Continue(From_Buffer, From_Buffer_Size);
+
+        if (Status & 0x08) //Bit3=Finished
+            break;
+
+        //Testing if there is a MediaInfo request to go elsewhere
+        if (MI.Open_Buffer_Continue_GoTo_Get() != (MediaInfo_int64u) -1) {
+            fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
+            MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+        }
+    } while (From_Buffer_Size > 0);
+
+    //Finalizing
+    MI.Open_Buffer_Finalize(); //This is the end of the stream, MediaInfo must finnish some work
+
+    //strInfo += __T("\r\n\r\nInform with Complete=false\r\n");
+    MI.Option(__T("Complete"));
+    strInfo += MI.Inform().c_str();
+    //strInfo += __T("\r\n\r\nClose\r\n");
+
+    LOG("MediaInfo_getMediaInfo() returns '%s'\n", PrintableChars(strInfo.c_str()));
+
+    return NewJString(pEnv, strInfo);
+
+    // this code don't work with files larger then 2GB (Use buffer code)
+    /*String cstr = NewString(pEnv, filename);
 
     MediaInfo MI;
 
@@ -442,7 +502,7 @@ MediaInfo_getMediaInfo(JNIEnv* pEnv, jobject self, jstring filename)
 
     LOG("MediaInfo_getMediaInfo() returns '%s'\n", PrintableChars(strInfo.c_str()));
 
-    return NewJString(pEnv, strInfo);
+    return NewJString(pEnv, strInfo);*/
 }
 
 JNIEXPORT jstring JNICALL

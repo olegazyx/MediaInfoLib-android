@@ -9,4 +9,5 @@ APP_STL := gnustl_static
 
 #APP_OPTIM := debug
 
-APP_CPPFLAGS += -fexceptions
+APP_CFLAGS += -Os -fvisibility=hidden
+APP_CPPFLAGS += -fexceptions -fvisibility=hidden

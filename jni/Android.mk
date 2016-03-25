@@ -3,8 +3,8 @@
 #
 
 #to build this file look at
-#  ../libmediainfo_0.7.82/MediaInfoLib/Project/CMake/CMakeLists.txt
-#  ../libmediainfo_0.7.82/ZenLib/Project/CMake/CMakeLists.txt
+#  ../libmediainfo_0.7.83/MediaInfoLib/Project/CMake/CMakeLists.txt
+#  ../libmediainfo_0.7.83/ZenLib/Project/CMake/CMakeLists.txt
 #
 # section:
 #  set(ZenLib_SRCS
@@ -17,7 +17,7 @@
 
 LOCAL_PATH := $(call my-dir)
 
-MEDIAINFO_DIR        = ../libmediainfo_0.7.82
+MEDIAINFO_DIR        = ../libmediainfo_0.7.83
 LIBZEN_INC_DIR       = $(MEDIAINFO_DIR)/ZenLib/Source
 LIBZEN_SRC_DIR       = $(MEDIAINFO_DIR)/ZenLib/Source/ZenLib
 LIBMEDIAINFO_INC_DIR = $(MEDIAINFO_DIR)/MediaInfoLib/Source
@@ -284,6 +284,7 @@ LOCAL_SRC_FILES := \
     $(LIBMEDIAINFO_SRC_DIR)/Video/File_Vc3.cpp \
     $(LIBMEDIAINFO_SRC_DIR)/Video/File_Vp8.cpp \
     $(LIBMEDIAINFO_SRC_DIR)/Video/File_Y4m.cpp \
+    $(LIBMEDIAINFO_SRC_DIR)/../MediaInfo/XmlUtils.cpp \
     $(LIBMEDIAINFO_SRC_DIR)/../MediaInfoDLL/MediaInfoDLL.cpp \
     $(LIBMEDIAINFO_SRC_DIR)/../ThirdParty/md5/md5.c \
     $(LIBMEDIAINFO_SRC_DIR)/../ThirdParty/tinyxml2/tinyxml2.cpp \
@@ -317,7 +318,7 @@ LOCAL_CFLAGS            += -Wall $(USER_CFLAGS)
 LOCAL_LDLIBS            := -llog -lz -lm
 LOCAL_CXXFLAGS          += -DUNICODE
 
-#http://stackoverflow.com/questions/12598933/ndk-build-createprocess-make-e-87-the-parameter-is-incorrect
-LOCAL_SHORT_COMMANDS     = true
+##http://stackoverflow.com/questions/12598933/ndk-build-createprocess-make-e-87-the-parameter-is-incorrect
+#LOCAL_SHORT_COMMANDS     = true
 
 include $(BUILD_SHARED_LIBRARY)

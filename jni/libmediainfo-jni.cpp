@@ -7,6 +7,12 @@
 #include <stdio.h>
 #include <MediaInfo/MediaInfo_Events.h>
 
+#include <unistd.h>
+
+//#include <iostream>
+//#include <sstream>
+//#include <string>
+
 // if need to debug messages, comment out below undef lines. Or use comment out lines in Android.mk
 //#define _DEBUG
 //#define DEBUG
@@ -147,6 +153,8 @@ extern "C" {
     JNIEXPORT jstring JNICALL MediaInfo_getMediaInfoOption(JNIEnv* pEnv, jobject self, jstring param);
 }
 
+const size_t buffsize = 7 * 188 * 1024; //1024 * 1024; //7 * 188; //7 * 188 - magic
+static const char* const kClassName = "org/mediainfo/android/MediaInfo";
 
 static const JNINativeMethod gMethods[] = {
     { "getById", "(Ljava/lang/String;III)Ljava/lang/String;", (void*)MediaInfo_getById},
@@ -176,7 +184,6 @@ JNI_OnLoad (JavaVM * vm, void * reserved)
         return -1;
     }
 
-    static const char* const kClassName = "org/mediainfo/android/MediaInfo";
     LOG("Registering %s natives\n", kClassName);
 
     jclass clazz = env->FindClass(kClassName);
@@ -306,6 +313,20 @@ NewString(JNIEnv *pEnv, jstring str)
     return value;
 }
 
+static inline bool
+IsCanceled(JNIEnv *pEnv, jobject self)
+{
+    jclass clazz = pEnv->FindClass(kClassName);
+    jmethodID getIsCanceled = pEnv->GetMethodID(clazz, "getIsCanceled", "()I");
+    int result = pEnv->CallIntMethod(self, getIsCanceled);
+
+    return (result != 0);
+}
+
+long long fseek_64(FILE *stream, int64_t offset, int origin) {
+    long long fd = fileno(stream);
+    return lseek64(fd, offset, origin);
+}
 
 ////////////////////////////////////////////////////////////////////////////
 //  Implementations of exported functions
@@ -325,15 +346,13 @@ MediaInfo_getById(JNIEnv* pEnv, jobject self, jstring filename, jint streamKind,
     if (F == 0)
         return NewJString(pEnv, __T("Error opening file..."));
 
-    size_t buffsize = 1024 * 1024; //7 * 188;
     //From: preparing a memory buffer for reading
     unsigned char* From_Buffer = new unsigned char[buffsize]; //Note: you can do your own buffer
     size_t From_Buffer_Size; //The size of the read file buffer
 
     //From: retrieving file size
-    fseek(F, 0, SEEK_END);
-    long F_Size = ftell(F);
-    fseek(F, 0, SEEK_SET);
+    long long F_Size = fseek_64(F, 0, SEEK_END);
+    fseek_64(F, 0, SEEK_SET);
 
     //Initializing MediaInfo
     MediaInfo MI;
@@ -341,7 +360,16 @@ MediaInfo_getById(JNIEnv* pEnv, jobject self, jstring filename, jint streamKind,
     MI.Open_Buffer_Init(F_Size, 0);
     //The parsing loop
 
+    bool isCanceled = false;
+
     do {
+        /*if (IsCanceled(pEnv, self)) {
+            LOGD("MediaInfo_getById() IsCanceled = '%s'\n", "True");
+            MI.Open_Buffer_Finalize();
+            fclose(F);
+            return pEnv->NewStringUTF("getById is canceled");
+        }*/
+
         //Reading data somewhere, do what you want for this.
         From_Buffer_Size = fread(From_Buffer, 1, buffsize, F);
         //Sending the buffer to MediaInfo
@@ -350,10 +378,17 @@ MediaInfo_getById(JNIEnv* pEnv, jobject self, jstring filename, jint streamKind,
         if (Status & 0x08) //Bit3=Finished
             break;
 
+        isCanceled = IsCanceled(pEnv, self);
+        if (isCanceled) {
+            LOGD("MediaInfo_getById() IsCanceled = '%s'\n", "True");
+            break;
+        }
+
         //Testing if there is a MediaInfo request to go elsewhere
         if (MI.Open_Buffer_Continue_GoTo_Get() != (MediaInfo_int64u) -1) {
-            fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
-            MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+            //fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
+            //MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+            MI.Open_Buffer_Init(F_Size, fseek_64(F, MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET));
         }
     } while (From_Buffer_Size > 0);
 
@@ -395,15 +430,13 @@ MediaInfo_getByName(JNIEnv* pEnv, jobject self, jstring filename, jint streamKin
     if (F == 0)
         return NewJString(pEnv, __T("Error opening file..."));
 
-    size_t buffsize = 1024 * 1024; //7 * 188;
     //From: preparing a memory buffer for reading
     unsigned char* From_Buffer = new unsigned char[buffsize]; //Note: you can do your own buffer
     size_t From_Buffer_Size; //The size of the read file buffer
 
     //From: retrieving file size
-    fseek(F, 0, SEEK_END);
-    long F_Size = ftell(F);
-    fseek(F, 0, SEEK_SET);
+    long long F_Size = fseek_64(F, 0, SEEK_END);
+    fseek_64(F, 0, SEEK_SET);
 
     //Initializing MediaInfo
     MediaInfo MI;
@@ -411,7 +444,16 @@ MediaInfo_getByName(JNIEnv* pEnv, jobject self, jstring filename, jint streamKin
     MI.Open_Buffer_Init(F_Size, 0);
     //The parsing loop
 
+    bool isCanceled = false;
+
     do {
+        /*if (IsCanceled(pEnv, self)) {
+            LOGD("MediaInfo_getByName() IsCanceled = '%s'\n", "True");
+            MI.Open_Buffer_Finalize();
+            fclose(F);
+            return pEnv->NewStringUTF("getByName is canceled");
+        }*/
+
         //Reading data somewhere, do what you want for this.
         From_Buffer_Size = fread(From_Buffer, 1, buffsize, F);
         //Sending the buffer to MediaInfo
@@ -420,10 +462,17 @@ MediaInfo_getByName(JNIEnv* pEnv, jobject self, jstring filename, jint streamKin
         if (Status & 0x08) //Bit3=Finished
             break;
 
+        isCanceled = IsCanceled(pEnv, self);
+        if (isCanceled) {
+            LOGD("MediaInfo_getByName() IsCanceled = '%s'\n", "True");
+            break;
+        }
+
         //Testing if there is a MediaInfo request to go elsewhere
         if (MI.Open_Buffer_Continue_GoTo_Get() != (MediaInfo_int64u) -1) {
-            fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
-            MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+            //fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
+            //MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+            MI.Open_Buffer_Init(F_Size, fseek_64(F, MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET));
         }
     } while (From_Buffer_Size > 0);
 
@@ -467,15 +516,13 @@ MediaInfo_getByIdDetail(JNIEnv* pEnv, jobject self, jstring filename, jint strea
     if (F == 0)
         return NewJString(pEnv, __T("Error opening file..."));
 
-    size_t buffsize = 1024 * 1024; //7 * 188;
     //From: preparing a memory buffer for reading
     unsigned char* From_Buffer = new unsigned char[buffsize]; //Note: you can do your own buffer
     size_t From_Buffer_Size; //The size of the read file buffer
 
     //From: retrieving file size
-    fseek(F, 0, SEEK_END);
-    long F_Size = ftell(F);
-    fseek(F, 0, SEEK_SET);
+    long long F_Size = fseek_64(F, 0, SEEK_END);
+    fseek_64(F, 0, SEEK_SET);
 
     //Initializing MediaInfo
     MediaInfo MI;
@@ -483,7 +530,16 @@ MediaInfo_getByIdDetail(JNIEnv* pEnv, jobject self, jstring filename, jint strea
     MI.Open_Buffer_Init(F_Size, 0);
     //The parsing loop
 
+    bool isCanceled = false;
+
     do {
+        /*if (IsCanceled(pEnv, self)) {
+            LOGD("MediaInfo_getByIdDetail() IsCanceled = '%s'\n", "True");
+            MI.Open_Buffer_Finalize();
+            fclose(F);
+            return pEnv->NewStringUTF("getByIdDetail is canceled");
+        }*/
+
         //Reading data somewhere, do what you want for this.
         From_Buffer_Size = fread(From_Buffer, 1, buffsize, F);
         //Sending the buffer to MediaInfo
@@ -492,10 +548,17 @@ MediaInfo_getByIdDetail(JNIEnv* pEnv, jobject self, jstring filename, jint strea
         if (Status & 0x08) //Bit3=Finished
             break;
 
+        isCanceled = IsCanceled(pEnv, self);
+        if (isCanceled) {
+            LOGD("MediaInfo_getByIdDetail() IsCanceled = '%s'\n", "True");
+            break;
+        }
+
         //Testing if there is a MediaInfo request to go elsewhere
         if (MI.Open_Buffer_Continue_GoTo_Get() != (MediaInfo_int64u) -1) {
-            fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
-            MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+            //fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
+            //MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+            MI.Open_Buffer_Init(F_Size, fseek_64(F, MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET));
         }
     } while (From_Buffer_Size > 0);
 
@@ -537,15 +600,13 @@ MediaInfo_getByNameDetail(JNIEnv* pEnv, jobject self, jstring filename, jint str
     if (F == 0)
         return NewJString(pEnv, __T("Error opening file..."));
 
-    size_t buffsize = 1024 * 1024; //7 * 188;
     //From: preparing a memory buffer for reading
     unsigned char* From_Buffer = new unsigned char[buffsize]; //Note: you can do your own buffer
     size_t From_Buffer_Size; //The size of the read file buffer
 
     //From: retrieving file size
-    fseek(F, 0, SEEK_END);
-    long F_Size = ftell(F);
-    fseek(F, 0, SEEK_SET);
+    long long F_Size = fseek_64(F, 0, SEEK_END);
+    fseek_64(F, 0, SEEK_SET);
 
     //Initializing MediaInfo
     MediaInfo MI;
@@ -553,7 +614,16 @@ MediaInfo_getByNameDetail(JNIEnv* pEnv, jobject self, jstring filename, jint str
     MI.Open_Buffer_Init(F_Size, 0);
     //The parsing loop
 
+    bool isCanceled = false;
+
     do {
+        /*if (IsCanceled(pEnv, self)) {
+            LOGD("MediaInfo_getByNameDetail() IsCanceled = '%s'\n", "True");
+            MI.Open_Buffer_Finalize();
+            fclose(F);
+            return pEnv->NewStringUTF("getByNameDetail is canceled");
+        }*/
+
         //Reading data somewhere, do what you want for this.
         From_Buffer_Size = fread(From_Buffer, 1, buffsize, F);
         //Sending the buffer to MediaInfo
@@ -562,10 +632,17 @@ MediaInfo_getByNameDetail(JNIEnv* pEnv, jobject self, jstring filename, jint str
         if (Status & 0x08) //Bit3=Finished
             break;
 
+        isCanceled = IsCanceled(pEnv, self);
+        if (isCanceled) {
+            LOGD("MediaInfo_getByNameDetail() IsCanceled = '%s'\n", "True");
+            break;
+        }
+
         //Testing if there is a MediaInfo request to go elsewhere
         if (MI.Open_Buffer_Continue_GoTo_Get() != (MediaInfo_int64u) -1) {
-            fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
-            MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+            //fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
+            //MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+            MI.Open_Buffer_Init(F_Size, fseek_64(F, MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET));
         }
     } while (From_Buffer_Size > 0);
 
@@ -609,15 +686,13 @@ MediaInfo_countGet(JNIEnv* pEnv, jobject self, jstring filename, jint streamKind
     if (F == 0)
         return -1;
 
-    size_t buffsize = 1024 * 1024; //7 * 188;
     //From: preparing a memory buffer for reading
     unsigned char* From_Buffer = new unsigned char[buffsize]; //Note: you can do your own buffer
     size_t From_Buffer_Size; //The size of the read file buffer
 
     //From: retrieving file size
-    fseek(F, 0, SEEK_END);
-    long F_Size = ftell(F);
-    fseek(F, 0, SEEK_SET);
+    long long F_Size = fseek_64(F, 0, SEEK_END);
+    fseek_64(F, 0, SEEK_SET);
 
     //Initializing MediaInfo
     MediaInfo MI;
@@ -625,7 +700,16 @@ MediaInfo_countGet(JNIEnv* pEnv, jobject self, jstring filename, jint streamKind
     MI.Open_Buffer_Init(F_Size, 0);
     //The parsing loop
 
+    bool isCanceled = false;
+
     do {
+        /*if (IsCanceled(pEnv, self)) {
+            LOGD("MediaInfo_countGet() IsCanceled = '%s'\n", "True");
+            MI.Open_Buffer_Finalize();
+            fclose(F);
+            return pEnv->NewStringUTF("countGet is canceled");
+        }*/
+
         //Reading data somewhere, do what you want for this.
         From_Buffer_Size = fread(From_Buffer, 1, buffsize, F);
         //Sending the buffer to MediaInfo
@@ -634,10 +718,17 @@ MediaInfo_countGet(JNIEnv* pEnv, jobject self, jstring filename, jint streamKind
         if (Status & 0x08) //Bit3=Finished
             break;
 
+        isCanceled = IsCanceled(pEnv, self);
+        if (isCanceled) {
+            LOGD("MediaInfo_countGet() IsCanceled = '%s'\n", "True");
+            break;
+        }
+
         //Testing if there is a MediaInfo request to go elsewhere
         if (MI.Open_Buffer_Continue_GoTo_Get() != (MediaInfo_int64u) -1) {
-            fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
-            MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+            //fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
+            //MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+            MI.Open_Buffer_Init(F_Size, fseek_64(F, MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET));
         }
     } while (From_Buffer_Size > 0);
 
@@ -678,15 +769,28 @@ MediaInfo_getMediaInfo(JNIEnv* pEnv, jobject self, jstring filename)
     if (F == 0)
         return NewJString(pEnv, __T("Error opening file..."));
 
-    size_t buffsize = 1024 * 1024; //7 * 188;
     //From: preparing a memory buffer for reading
     unsigned char* From_Buffer = new unsigned char[buffsize]; //Note: you can do your own buffer
     size_t From_Buffer_Size; //The size of the read file buffer
 
-    //From: retrieving file size
-    fseek(F, 0, SEEK_END);
-    long F_Size = ftell(F);
-    fseek(F, 0, SEEK_SET);
+    ////From: retrieving file size
+    //fseek(F, 0, SEEK_END);
+    //long F_Size = ftell(F);
+    //fseek(F, 0, SEEK_SET);
+
+    //char temp[128];
+    //sprintf(temp, "%ld", F_Size);
+    //LOGE(" F_Size() = '%s'\n", temp);
+
+    //std::wstring value;
+    //value.assign(temp, temp + 128);
+
+    //strInfo += __T("File size                                : ");
+    //strInfo += value;
+    //strInfo += __T("\r\n\r\n");
+
+    long long F_Size = fseek_64(F, 0, SEEK_END);
+    fseek_64(F, 0, SEEK_SET);
 
     //Initializing MediaInfo
     MediaInfo MI;
@@ -694,7 +798,16 @@ MediaInfo_getMediaInfo(JNIEnv* pEnv, jobject self, jstring filename)
     MI.Open_Buffer_Init(F_Size, 0);
     //The parsing loop
 
+    bool isCanceled = false;
+
     do {
+        /*if (IsCanceled(pEnv, self)) {
+            LOGD("MediaInfo_getMediaInfo() IsCanceled = '%s'\n", "True");
+            MI.Open_Buffer_Finalize();
+            fclose(F);
+            return pEnv->NewStringUTF("getMediaInfo is canceled");
+        }*/
+
         //Reading data somewhere, do what you want for this.
         From_Buffer_Size = fread(From_Buffer, 1, buffsize, F);
         //Sending the buffer to MediaInfo
@@ -703,10 +816,17 @@ MediaInfo_getMediaInfo(JNIEnv* pEnv, jobject self, jstring filename)
         if (Status & 0x08) //Bit3=Finished
             break;
 
+        isCanceled = IsCanceled(pEnv, self);
+        if (isCanceled) {
+            LOGD("MediaInfo_getMediaInfo() IsCanceled = '%s'\n", "True");
+            break;
+        }
+
         //Testing if there is a MediaInfo request to go elsewhere
         if (MI.Open_Buffer_Continue_GoTo_Get() != (MediaInfo_int64u) -1) {
-            fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
-            MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+            //fseek(F, (long) MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET); //Position the file
+            //MI.Open_Buffer_Init(F_Size, ftell(F)); //Informing MediaInfo we have seek
+            MI.Open_Buffer_Init(F_Size, fseek_64(F, MI.Open_Buffer_Continue_GoTo_Get(), SEEK_SET));
         }
     } while (From_Buffer_Size > 0);
 
@@ -717,6 +837,13 @@ MediaInfo_getMediaInfo(JNIEnv* pEnv, jobject self, jstring filename)
     MI.Option(__T("Complete"));
     strInfo += MI.Inform().c_str();
     //strInfo += __T("\r\n\r\nClose\r\n");
+
+    if (isCanceled) {
+        strInfo +=  __T("Getting MediaInfo for '");
+        strInfo += NewString(pEnv, filename);
+        strInfo += __T("' has been terminated!");
+        strInfo += __T("\r\nThe data obtained are not fully!");
+    }
 
     fclose(F);
 

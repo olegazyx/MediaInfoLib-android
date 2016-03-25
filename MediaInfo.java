@@ -10,6 +10,8 @@ package org.mediainfo.android;
  */
 public class MediaInfo {
 
+    public static int isCanceled = 0;
+
     // @remark Don't change it carelessly.
     // This order is from MediaInfo_Const.h
     public enum StreamKind {
@@ -42,6 +44,10 @@ public class MediaInfo {
     public MediaInfo() {
         //handle = create();
         System.out.println("MediaInfo created");
+    }
+
+    public int getIsCanceled() {
+        return isCanceled;
     }
 
     /**

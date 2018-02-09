@@ -399,6 +399,8 @@ MediaInfo_getById(JNIEnv* pEnv, jobject self, jstring filename, jint streamKind,
 
     fclose(F);
 
+    delete [] From_Buffer;
+
     //MediaInfo MI;
 
     //String strInfo;
@@ -483,6 +485,8 @@ MediaInfo_getByName(JNIEnv* pEnv, jobject self, jstring filename, jint streamKin
     strInfo = MI.Get(CastStreamKind(streamKind), streamNum, cstr);
 
     fclose(F);
+
+    delete [] From_Buffer;
 
     //MediaInfo MI;
 
@@ -569,6 +573,8 @@ MediaInfo_getByIdDetail(JNIEnv* pEnv, jobject self, jstring filename, jint strea
 
     fclose(F);
 
+    delete [] From_Buffer;
+
     //MediaInfo MI;
 
     //String strInfo;
@@ -654,6 +660,8 @@ MediaInfo_getByNameDetail(JNIEnv* pEnv, jobject self, jstring filename, jint str
 
     fclose(F);
 
+    delete [] From_Buffer;
+
     //MediaInfo MI;
 
     //String strInfo;
@@ -738,6 +746,8 @@ MediaInfo_countGet(JNIEnv* pEnv, jobject self, jstring filename, jint streamKind
     int intInfo = MI.Count_Get(CastStreamKind(streamKind), (size_t) streamNum);;
 
     fclose(F);
+
+    delete [] From_Buffer;
 
     //MediaInfo MI;
 
@@ -846,6 +856,8 @@ MediaInfo_getMediaInfo(JNIEnv* pEnv, jobject self, jstring filename)
     }
 
     fclose(F);
+
+    delete [] From_Buffer;
 
     LOG("MediaInfo_getMediaInfo() returns '%s'\n", PrintableChars(strInfo.c_str()));
 
